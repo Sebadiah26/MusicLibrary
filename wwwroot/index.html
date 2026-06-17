@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Music Library</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>🎵 Music Library</h1>
+    <p class="sub">Import artists, albums &amp; songs from CSV — then curate genre, sub-genre, favorites and ratings.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Import CSV</h2>
+      <div class="upload-row">
+        <label>
+          File type
+          <select id="csvType">
+            <option value="artists">Artists</option>
+            <option value="albums">Albums</option>
+            <option value="songs">Songs</option>
+          </select>
+        </label>
+        <label class="file-label">
+          CSV file
+          <input type="file" id="csvFile" accept=".csv,text/csv" />
+        </label>
+        <button id="uploadBtn">Upload</button>
+      </div>
+      <div id="uploadStatus" class="status" hidden></div>
+
+      <details class="hint">
+        <summary>Expected columns</summary>
+        <ul>
+          <li><strong>Artists:</strong> <code>Name</code> (required), <code>Genre</code>, <code>SubGenre</code>, <code>IsFavorite</code>, <code>Rating</code></li>
+          <li><strong>Albums:</strong> <code>Artist</code> (required), <code>Album</code>/<code>Title</code> (required), <code>Year</code></li>
+          <li><strong>Songs:</strong> <code>Artist</code> (required), <code>Song</code>/<code>Title</code> (required), <code>Album</code>, <code>Duration</code> (sec or mm:ss)</li>
+        </ul>
+        <p>Header names are matched case-insensitively and ignore spaces. Unknown columns are ignored.</p>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="list-header">
+        <h2>Artists</h2>
+        <div class="filters">
+          <input type="search" id="search" placeholder="Search artists…" />
+          <label class="checkbox"><input type="checkbox" id="favOnly" /> Favorites only</label>
+          <button id="refreshBtn" class="ghost">Refresh</button>
+        </div>
+      </div>
+
+      <div id="artists"></div>
+      <p id="emptyMsg" class="empty" hidden>No artists yet. Import a CSV to get started.</p>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
