@@ -44,6 +44,26 @@
     </section>
 
     <section class="card">
+      <h2>iTunes XML Import</h2>
+      <div class="upload-row">
+        <label class="file-label">
+          iTunes XML file
+          <input type="file" id="itunesFile" accept=".xml,text/xml" />
+        </label>
+        <button id="itunesImportBtn">Import to Library</button>
+        <button id="itunesConvertBtn" class="ghost">Download as CSV</button>
+      </div>
+      <div id="itunesStatus" class="status" hidden></div>
+
+      <details class="hint">
+        <summary>About iTunes XML import</summary>
+        <p>Upload your <code>iTunes Music Library.xml</code> file (found in your iTunes/Music folder).
+           Tracks are parsed and imported as artists, albums, and songs.
+           Use "Download as CSV" to get three CSV files compatible with the manual import above.</p>
+      </details>
+    </section>
+
+    <section class="card">
       <div class="list-header">
         <h2>Artists</h2>
         <div class="filters">

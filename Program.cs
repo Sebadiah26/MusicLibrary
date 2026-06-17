@@ -9,6 +9,7 @@ builder.Services.AddDbContext<MusicContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddScoped<CsvImportService>();
+builder.Services.AddSingleton<ITunesXmlParserService>();
 
 // Allow larger CSV uploads (default multipart limit is ~128 MB; we cap files at 25 MB below).
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
@@ -126,6 +127,103 @@ app.MapDelete("/api/artists/{id:int}", async (int id, MusicContext db) =>
     db.Artists.Remove(artist);
     await db.SaveChangesAsync();
     return Results.NoContent();
+});
+
+// ---- iTunes XML endpoints ------------------------------------------------
+
+app.MapPost("/api/itunes/import", async (HttpRequest request, ITunesXmlParserService parser, CsvImportService importer) =>
+{
+    if (!request.HasFormContentType)
+        return Results.BadRequest(new { error = "Expected a multipart/form-data upload." });
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files.GetFile("file");
+
+    if (file is null || file.Length == 0)
+        return Results.BadRequest(new { error = "No file was provided." });
+
+    if (file.Length > 25 * 1024 * 1024)
+        return Results.BadRequest(new { error = "File exceeds the 25 MB limit." });
+
+    await using var stream = file.OpenReadStream();
+    List<ITunesTrack> tracks;
+    try
+    {
+        tracks = await parser.ParseXmlAsync(stream);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = "Failed to parse iTunes XML: " + ex.Message });
+    }
+
+    if (tracks.Count == 0)
+        return Results.BadRequest(new { error = "No music tracks found in the XML file." });
+
+    // Import artists, then albums, then songs through the existing CSV pipeline.
+    var artistsCsv = parser.GenerateArtistsCsv(tracks);
+    var albumsCsv = parser.GenerateAlbumsCsv(tracks);
+    var songsCsv = parser.GenerateSongsCsv(tracks);
+
+    var messages = new List<string>();
+    int totalArtists = 0, totalAlbums = 0, totalSongs = 0, totalSkipped = 0;
+
+    var artistResult = await importer.ImportAsync(CsvType.Artists, new MemoryStream(System.Text.Encoding.UTF8.GetBytes(artistsCsv)));
+    totalArtists += artistResult.ArtistsAdded;
+    totalSkipped += artistResult.RowsSkipped;
+    messages.AddRange(artistResult.Messages);
+
+    var albumResult = await importer.ImportAsync(CsvType.Albums, new MemoryStream(System.Text.Encoding.UTF8.GetBytes(albumsCsv)));
+    totalArtists += albumResult.ArtistsAdded;
+    totalAlbums += albumResult.AlbumsAdded;
+    totalSkipped += albumResult.RowsSkipped;
+    messages.AddRange(albumResult.Messages);
+
+    var songResult = await importer.ImportAsync(CsvType.Songs, new MemoryStream(System.Text.Encoding.UTF8.GetBytes(songsCsv)));
+    totalArtists += songResult.ArtistsAdded;
+    totalAlbums += songResult.AlbumsAdded;
+    totalSongs += songResult.SongsAdded;
+    totalSkipped += songResult.RowsSkipped;
+    messages.AddRange(songResult.Messages);
+
+    return Results.Ok(new ImportResult(true, totalArtists, totalAlbums, totalSongs, totalSkipped,
+        new[] { $"iTunes import complete: {totalArtists} artist(s), {totalAlbums} album(s), {totalSongs} song(s) added from {tracks.Count} track(s)." }));
+});
+
+app.MapPost("/api/itunes/convert", async (HttpRequest request, ITunesXmlParserService parser) =>
+{
+    if (!request.HasFormContentType)
+        return Results.BadRequest(new { error = "Expected a multipart/form-data upload." });
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files.GetFile("file");
+
+    if (file is null || file.Length == 0)
+        return Results.BadRequest(new { error = "No file was provided." });
+
+    if (file.Length > 25 * 1024 * 1024)
+        return Results.BadRequest(new { error = "File exceeds the 25 MB limit." });
+
+    await using var stream = file.OpenReadStream();
+    List<ITunesTrack> tracks;
+    try
+    {
+        tracks = await parser.ParseXmlAsync(stream);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = "Failed to parse iTunes XML: " + ex.Message });
+    }
+
+    if (tracks.Count == 0)
+        return Results.BadRequest(new { error = "No music tracks found in the XML file." });
+
+    return Results.Ok(new
+    {
+        trackCount = tracks.Count,
+        artistsCsv = parser.GenerateArtistsCsv(tracks),
+        albumsCsv = parser.GenerateAlbumsCsv(tracks),
+        songsCsv = parser.GenerateSongsCsv(tracks)
+    });
 });
 
 app.Run();

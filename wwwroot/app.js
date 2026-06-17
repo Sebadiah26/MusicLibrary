@@ -5,6 +5,10 @@ const els = {
   file: $("#csvFile"),
   uploadBtn: $("#uploadBtn"),
   uploadStatus: $("#uploadStatus"),
+  itunesFile: $("#itunesFile"),
+  itunesImportBtn: $("#itunesImportBtn"),
+  itunesConvertBtn: $("#itunesConvertBtn"),
+  itunesStatus: $("#itunesStatus"),
   search: $("#search"),
   favOnly: $("#favOnly"),
   refreshBtn: $("#refreshBtn"),
@@ -50,6 +54,92 @@ function showStatus(msg, ok) {
   els.uploadStatus.textContent = msg;
   els.uploadStatus.className = "status " + (ok ? "ok" : "err");
   els.uploadStatus.hidden = false;
+}
+
+// ---- iTunes XML Import -----------------------------------------------------
+
+function showItunesStatus(msg, ok) {
+  els.itunesStatus.textContent = msg;
+  els.itunesStatus.className = "status " + (ok ? "ok" : "err");
+  els.itunesStatus.hidden = false;
+}
+
+els.itunesImportBtn.addEventListener("click", async () => {
+  const file = els.itunesFile.files[0];
+  if (!file) {
+    showItunesStatus("Choose an iTunes XML file first.", false);
+    return;
+  }
+
+  const form = new FormData();
+  form.append("file", file);
+
+  els.itunesImportBtn.disabled = true;
+  els.itunesConvertBtn.disabled = true;
+  els.itunesImportBtn.textContent = "Importing…";
+
+  try {
+    const res = await fetch("/api/itunes/import", { method: "POST", body: form });
+    const data = await res.json();
+    if (res.ok) {
+      showItunesStatus((data.messages || ["Imported."]).join(" "), true);
+      els.itunesFile.value = "";
+      await loadArtists();
+    } else {
+      showItunesStatus(data.error || "Import failed.", false);
+    }
+  } catch (err) {
+    showItunesStatus("Network error: " + err.message, false);
+  } finally {
+    els.itunesImportBtn.disabled = false;
+    els.itunesConvertBtn.disabled = false;
+    els.itunesImportBtn.textContent = "Import to Library";
+  }
+});
+
+els.itunesConvertBtn.addEventListener("click", async () => {
+  const file = els.itunesFile.files[0];
+  if (!file) {
+    showItunesStatus("Choose an iTunes XML file first.", false);
+    return;
+  }
+
+  const form = new FormData();
+  form.append("file", file);
+
+  els.itunesImportBtn.disabled = true;
+  els.itunesConvertBtn.disabled = true;
+  els.itunesConvertBtn.textContent = "Converting…";
+
+  try {
+    const res = await fetch("/api/itunes/convert", { method: "POST", body: form });
+    const data = await res.json();
+    if (res.ok) {
+      downloadCsvFile("artists.csv", data.artistsCsv);
+      downloadCsvFile("albums.csv", data.albumsCsv);
+      downloadCsvFile("songs.csv", data.songsCsv);
+      showItunesStatus(`Converted ${data.trackCount} track(s). Three CSV files downloaded.`, true);
+    } else {
+      showItunesStatus(data.error || "Conversion failed.", false);
+    }
+  } catch (err) {
+    showItunesStatus("Network error: " + err.message, false);
+  } finally {
+    els.itunesImportBtn.disabled = false;
+    els.itunesConvertBtn.disabled = false;
+    els.itunesConvertBtn.textContent = "Download as CSV";
+  }
+});
+
+function downloadCsvFile(filename, content) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
 }
 
 // ---- List ------------------------------------------------------------------
