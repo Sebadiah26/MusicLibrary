@@ -11,10 +11,14 @@ builder.Services.AddDbContext<MusicContext>(opt =>
 builder.Services.AddScoped<CsvImportService>();
 builder.Services.AddSingleton<ITunesXmlParserService>();
 
-// Allow larger CSV uploads (default multipart limit is ~128 MB; we cap files at 25 MB below).
+// Allow larger uploads (iTunes XML libraries can be 50+ MB).
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
 {
-    o.MultipartBodyLengthLimit = 25 * 1024 * 1024;
+    o.MultipartBodyLengthLimit = 100 * 1024 * 1024;
+});
+builder.WebHost.ConfigureKestrel(o =>
+{
+    o.Limits.MaxRequestBodySize = 100 * 1024 * 1024;
 });
 
 var app = builder.Build();
@@ -142,8 +146,8 @@ app.MapPost("/api/itunes/import", async (HttpRequest request, ITunesXmlParserSer
     if (file is null || file.Length == 0)
         return Results.BadRequest(new { error = "No file was provided." });
 
-    if (file.Length > 25 * 1024 * 1024)
-        return Results.BadRequest(new { error = "File exceeds the 25 MB limit." });
+    if (file.Length > 100 * 1024 * 1024)
+        return Results.BadRequest(new { error = "File exceeds the 100 MB limit." });
 
     await using var stream = file.OpenReadStream();
     List<ITunesTrack> tracks;
@@ -200,8 +204,8 @@ app.MapPost("/api/itunes/convert", async (HttpRequest request, ITunesXmlParserSe
     if (file is null || file.Length == 0)
         return Results.BadRequest(new { error = "No file was provided." });
 
-    if (file.Length > 25 * 1024 * 1024)
-        return Results.BadRequest(new { error = "File exceeds the 25 MB limit." });
+    if (file.Length > 100 * 1024 * 1024)
+        return Results.BadRequest(new { error = "File exceeds the 100 MB limit." });
 
     await using var stream = file.OpenReadStream();
     List<ITunesTrack> tracks;
