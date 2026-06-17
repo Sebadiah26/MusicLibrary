@@ -42,6 +42,9 @@ dotnet build MusicLibrary.sln
 dotnet run --project MusicLibrary
 ```
 
+### Sebadiah26/workspace-config
+Workspace-level configuration and documentation for the multi-project development environment. Contains this `CLAUDE.md` and a `.gitignore` for all independent project subdirectories.
+
 ### template-python
 Python 3.11+ project using Poetry. Has pytest, mypy, pylint, black, mkdocs.
 ```
