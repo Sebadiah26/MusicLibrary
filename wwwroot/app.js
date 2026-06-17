@@ -1,19 +1,27 @@
-const $ = (sel) => document.querySelector(sel);
+// Ensure global `$` refers to jQuery if present (avoids BrowserLink $.noConflict error)
+if (typeof window !== "undefined" && window.jQuery && (!window.$ || typeof window.$.noConflict !== "function")) {
+  // Assign window.jQuery to window.$ so scripts that call $.noConflict() see the jQuery API.
+  // This is conservative: we only overwrite window.$ when it is missing or doesn't have noConflict.
+  window.$ = window.jQuery;
+}
+
+// selector helper — do not clobber global `$` (avoids jQuery / BrowserLink conflicts)
+const $sel = (sel) => document.querySelector(sel);
 
 const els = {
-  type: $("#csvType"),
-  file: $("#csvFile"),
-  uploadBtn: $("#uploadBtn"),
-  uploadStatus: $("#uploadStatus"),
-  itunesFile: $("#itunesFile"),
-  itunesImportBtn: $("#itunesImportBtn"),
-  itunesConvertBtn: $("#itunesConvertBtn"),
-  itunesStatus: $("#itunesStatus"),
-  search: $("#search"),
-  favOnly: $("#favOnly"),
-  refreshBtn: $("#refreshBtn"),
-  artists: $("#artists"),
-  emptyMsg: $("#emptyMsg"),
+  type: $sel("#csvType"),
+  file: $sel("#csvFile"),
+  uploadBtn: $sel("#uploadBtn"),
+  uploadStatus: $sel("#uploadStatus"),
+  itunesFile: $sel("#itunesFile"),
+  itunesImportBtn: $sel("#itunesImportBtn"),
+  itunesConvertBtn: $sel("#itunesConvertBtn"),
+  itunesStatus: $sel("#itunesStatus"),
+  search: $sel("#search"),
+  favOnly: $sel("#favOnly"),
+  refreshBtn: $sel("#refreshBtn"),
+  artists: $sel("#artists"),
+  emptyMsg: $sel("#emptyMsg"),
 };
 
 // ---- Upload ----------------------------------------------------------------
