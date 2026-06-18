@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>MusicLibrary</RootNamespace>
+    <UserSecretsId>fdcf18d4-dcd0-4431-ae75-788ef902ee94</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
