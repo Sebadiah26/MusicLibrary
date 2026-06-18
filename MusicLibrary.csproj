@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>MusicLibrary</RootNamespace>
     <UserSecretsId>fdcf18d4-dcd0-4431-ae75-788ef902ee94</UserSecretsId>
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
   </PropertyGroup>
 
   <ItemGroup>
