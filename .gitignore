@@ -6,3 +6,4 @@ appsettings.Development.json
 *.mdf
 *.ldf
 iTunes Music Library.xml
+publish/
