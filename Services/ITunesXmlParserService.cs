@@ -9,7 +9,8 @@ public record ITunesTrack(
     string? Album,
     string? Genre,
     int? DurationSeconds,
-    int? Year);
+    int? Year,
+    bool IsFavorite);
 
 public class ITunesXmlParserService
 {
@@ -66,13 +67,16 @@ public class ITunesXmlParserService
                 year = y;
             }
 
+            bool isFavorite = fields.GetValueOrDefault("Loved") == "true";
+
             tracks.Add(new ITunesTrack(
                 Name: fields.GetValueOrDefault("Name"),
                 Artist: fields.GetValueOrDefault("Artist"),
                 Album: fields.GetValueOrDefault("Album"),
                 Genre: fields.GetValueOrDefault("Genre"),
                 DurationSeconds: duration,
-                Year: year));
+                Year: year,
+                IsFavorite: isFavorite));
         }
 
         return Task.FromResult(tracks);
@@ -120,14 +124,14 @@ public class ITunesXmlParserService
     public string GenerateSongsCsv(List<ITunesTrack> tracks)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("Artist,Album,Song,Duration");
+        sb.AppendLine("Artist,Album,Song,Duration,IsFavorite");
 
         foreach (var t in tracks)
         {
             if (string.IsNullOrWhiteSpace(t.Artist) || string.IsNullOrWhiteSpace(t.Name))
                 continue;
 
-            sb.AppendLine($"{CsvEscape(t.Artist)},{CsvEscape(t.Album)},{CsvEscape(t.Name)},{t.DurationSeconds?.ToString() ?? ""}");
+            sb.AppendLine($"{CsvEscape(t.Artist)},{CsvEscape(t.Album)},{CsvEscape(t.Name)},{t.DurationSeconds?.ToString() ?? ""},{(t.IsFavorite ? "true" : "")}");
         }
 
         return sb.ToString();

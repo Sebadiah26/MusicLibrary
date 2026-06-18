@@ -19,4 +19,7 @@ public class Song
 
     /// <summary>Track length in seconds (optional).</summary>
     public int? DurationSeconds { get; set; }
+
+    /// <summary>Whether the user has marked this song as a favorite/loved.</summary>
+    public bool IsFavorite { get; set; }
 }

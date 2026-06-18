@@ -77,7 +77,8 @@ app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorit
         {
             a.Id, a.Name, a.Genre, a.SubGenre, a.IsFavorite, a.Rating,
             AlbumCount = a.Albums.Count,
-            SongCount = a.Songs.Count
+            SongCount = a.Songs.Count,
+            FavoriteSongCount = a.Songs.Count(s => s.IsFavorite)
         })
         .ToListAsync();
 
@@ -98,7 +99,7 @@ app.MapGet("/api/artists/{id:int}", async (int id, MusicContext db) =>
                 .Select(al => new { al.Id, al.Title, al.Year, SongCount = al.Songs.Count }),
             Songs = a.Songs
                 .OrderBy(s => s.Title)
-                .Select(s => new { s.Id, s.Title, s.DurationSeconds, s.AlbumId })
+                .Select(s => new { s.Id, s.Title, s.DurationSeconds, s.AlbumId, s.IsFavorite })
         })
         .FirstOrDefaultAsync();
 
@@ -189,8 +190,18 @@ app.MapPost("/api/itunes/import", async (HttpRequest request, ITunesXmlParserSer
     totalSkipped += songResult.RowsSkipped;
     messages.AddRange(songResult.Messages);
 
-    return Results.Ok(new ImportResult(true, totalArtists, totalAlbums, totalSongs, totalSkipped,
-        new[] { $"iTunes import complete: {totalArtists} artist(s), {totalAlbums} album(s), {totalSongs} song(s) added from {tracks.Count} track(s)." }));
+    var totalFavorites = tracks.Count(t => t.IsFavorite);
+
+    return Results.Ok(new
+    {
+        success = true,
+        artistsAdded = totalArtists,
+        albumsAdded = totalAlbums,
+        songsAdded = totalSongs,
+        favoriteSongs = totalFavorites,
+        rowsSkipped = totalSkipped,
+        messages = new[] { $"iTunes import complete: {totalArtists} artist(s), {totalAlbums} album(s), {totalSongs} song(s) added from {tracks.Count} track(s). {totalFavorites} favorite song(s)." }
+    });
 });
 
 app.MapPost("/api/itunes/convert", async (HttpRequest request, ITunesXmlParserService parser) =>

@@ -180,7 +180,8 @@ function renderArtist(a) {
   const wrap = document.createElement("div");
   wrap.className = "artist";
 
-  const counts = `${a.albumCount} album${a.albumCount === 1 ? "" : "s"} · ${a.songCount} song${a.songCount === 1 ? "" : "s"}`;
+  const favPart = a.favoriteSongCount > 0 ? ` · ${a.favoriteSongCount} fav${a.favoriteSongCount === 1 ? "" : "s"}` : "";
+  const counts = `${a.albumCount} album${a.albumCount === 1 ? "" : "s"} · ${a.songCount} song${a.songCount === 1 ? "" : "s"}${favPart}`;
 
   const main = document.createElement("div");
   main.className = "artist-main";

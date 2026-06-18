@@ -172,7 +172,8 @@ public class CsvImportService
             var song = new Song
             {
                 Title = songTitle,
-                DurationSeconds = ParseDuration(Field(csv, map, "duration", "length", "time"))
+                DurationSeconds = ParseDuration(Field(csv, map, "duration", "length", "time")),
+                IsFavorite = ParseBool(Field(csv, map, "isfavorite", "favorite", "fav", "loved"))
             };
             artist.Songs.Add(song);
             if (album is not null) album.Songs.Add(song);
