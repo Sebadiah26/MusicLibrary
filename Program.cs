@@ -61,7 +61,7 @@ app.MapPost("/api/upload", async (HttpRequest request, CsvImportService importer
 });
 
 // List all artists (with counts).
-app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorites) =>
+app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorites, string? genre, string? subGenre) =>
 {
     var query = db.Artists.AsNoTracking().AsQueryable();
 
@@ -70,6 +70,12 @@ app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorit
 
     if (favorites == true)
         query = query.Where(a => a.IsFavorite);
+
+    if (!string.IsNullOrWhiteSpace(genre))
+        query = query.Where(a => a.Genre != null && a.Genre == genre);
+
+    if (!string.IsNullOrWhiteSpace(subGenre))
+        query = query.Where(a => a.SubGenre != null && a.SubGenre == subGenre);
 
     var list = await query
         .OrderBy(a => a.Name)
@@ -83,6 +89,31 @@ app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorit
         .ToListAsync();
 
     return Results.Ok(list);
+});
+
+// List distinct genres and sub-genres.
+app.MapGet("/api/genres", async (MusicContext db) =>
+{
+    var genres = await db.Artists.AsNoTracking()
+        .Where(a => a.Genre != null && a.Genre != "")
+        .Select(a => new { a.Genre, a.SubGenre })
+        .ToListAsync();
+
+    var genreList = genres
+        .GroupBy(g => g.Genre, StringComparer.OrdinalIgnoreCase)
+        .OrderBy(g => g.Key)
+        .Select(g => new
+        {
+            genre = g.Key,
+            subGenres = g.Where(x => !string.IsNullOrWhiteSpace(x.SubGenre))
+                         .Select(x => x.SubGenre!)
+                         .Distinct(StringComparer.OrdinalIgnoreCase)
+                         .OrderBy(s => s)
+                         .ToList()
+        })
+        .ToList();
+
+    return Results.Ok(genreList);
 });
 
 // Full detail for one artist, including albums and songs.
@@ -132,6 +163,16 @@ app.MapDelete("/api/artists/{id:int}", async (int id, MusicContext db) =>
     db.Artists.Remove(artist);
     await db.SaveChangesAsync();
     return Results.NoContent();
+});
+
+// Clear all data.
+app.MapDelete("/api/reset", async (MusicContext db) =>
+{
+    db.Songs.RemoveRange(db.Songs);
+    db.Albums.RemoveRange(db.Albums);
+    db.Artists.RemoveRange(db.Artists);
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = "All data cleared." });
 });
 
 // ---- iTunes XML endpoints ------------------------------------------------

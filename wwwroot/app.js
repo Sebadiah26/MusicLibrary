@@ -18,8 +18,11 @@ const els = {
   itunesConvertBtn: $sel("#itunesConvertBtn"),
   itunesStatus: $sel("#itunesStatus"),
   search: $sel("#search"),
+  genreFilter: $sel("#genreFilter"),
+  subGenreFilter: $sel("#subGenreFilter"),
   favOnly: $sel("#favOnly"),
   refreshBtn: $sel("#refreshBtn"),
+  clearAllBtn: $sel("#clearAllBtn"),
   artists: $sel("#artists"),
   emptyMsg: $sel("#emptyMsg"),
 };
@@ -158,12 +161,67 @@ els.search.addEventListener("input", () => {
   debounce = setTimeout(loadArtists, 250);
 });
 els.favOnly.addEventListener("change", loadArtists);
-els.refreshBtn.addEventListener("click", loadArtists);
+els.genreFilter.addEventListener("change", () => {
+  updateSubGenreOptions();
+  loadArtists();
+});
+els.subGenreFilter.addEventListener("change", loadArtists);
+els.refreshBtn.addEventListener("click", () => { loadGenres(); loadArtists(); });
+els.clearAllBtn.addEventListener("click", async () => {
+  if (!confirm("Delete ALL artists, albums, and songs? This cannot be undone.")) return;
+  els.clearAllBtn.disabled = true;
+  els.clearAllBtn.textContent = "Clearing…";
+  try {
+    const res = await fetch("/api/reset", { method: "DELETE" });
+    if (res.ok) await loadArtists();
+    else alert("Failed to clear data.");
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+  els.clearAllBtn.disabled = false;
+  els.clearAllBtn.textContent = "Clear All Data";
+});
+
+let genreData = [];
+
+async function loadGenres() {
+  const res = await fetch("/api/genres");
+  genreData = await res.json();
+  const selected = els.genreFilter.value;
+  els.genreFilter.innerHTML = '<option value="">All genres</option>';
+  for (const g of genreData) {
+    const opt = document.createElement("option");
+    opt.value = g.genre;
+    opt.textContent = g.genre;
+    els.genreFilter.appendChild(opt);
+  }
+  els.genreFilter.value = selected;
+  updateSubGenreOptions();
+}
+
+function updateSubGenreOptions() {
+  const genre = els.genreFilter.value;
+  const selected = els.subGenreFilter.value;
+  els.subGenreFilter.innerHTML = '<option value="">All sub-genres</option>';
+  if (!genre) { els.subGenreFilter.disabled = true; return; }
+  const entry = genreData.find(g => g.genre === genre);
+  if (!entry || entry.subGenres.length === 0) { els.subGenreFilter.disabled = true; return; }
+  els.subGenreFilter.disabled = false;
+  for (const s of entry.subGenres) {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    els.subGenreFilter.appendChild(opt);
+  }
+  els.subGenreFilter.value = selected;
+}
 
 async function loadArtists() {
   const params = new URLSearchParams();
   if (els.search.value.trim()) params.set("search", els.search.value.trim());
   if (els.favOnly.checked) params.set("favorites", "true");
+  if (els.genreFilter.value) params.set("genre", els.genreFilter.value);
+  if (els.subGenreFilter.value) params.set("subGenre", els.subGenreFilter.value);
 
   const res = await fetch("/api/artists?" + params.toString());
   const list = await res.json();
@@ -335,4 +393,5 @@ function escapeAttr(v) {
   return escapeHtml(v).replace(/"/g, "&quot;");
 }
 
+loadGenres();
 loadArtists();
