@@ -21,9 +21,11 @@ const els = {
   genreFilter: $sel("#genreFilter"),
   subGenreFilter: $sel("#subGenreFilter"),
   favOnly: $sel("#favOnly"),
+  viewToggleBtn: $sel("#viewToggleBtn"),
   refreshBtn: $sel("#refreshBtn"),
   clearAllBtn: $sel("#clearAllBtn"),
   artists: $sel("#artists"),
+  genreView: $sel("#genreView"),
   emptyMsg: $sel("#emptyMsg"),
 };
 
@@ -167,6 +169,13 @@ els.genreFilter.addEventListener("change", () => {
 });
 els.subGenreFilter.addEventListener("change", loadArtists);
 els.refreshBtn.addEventListener("click", () => { loadGenres(); loadArtists(); });
+let viewMode = "list"; // "list" or "genre"
+els.viewToggleBtn.addEventListener("click", () => {
+  viewMode = viewMode === "list" ? "genre" : "list";
+  els.viewToggleBtn.textContent = viewMode === "list" ? "By Genre" : "Detail View";
+  loadArtists();
+});
+
 els.clearAllBtn.addEventListener("click", async () => {
   if (!confirm("Delete ALL artists, albums, and songs? This cannot be undone.")) return;
   els.clearAllBtn.disabled = true;
@@ -227,11 +236,95 @@ async function loadArtists() {
   const list = await res.json();
 
   els.artists.innerHTML = "";
+  els.genreView.innerHTML = "";
   els.emptyMsg.hidden = list.length > 0;
 
-  for (const a of list) {
-    els.artists.appendChild(renderArtist(a));
+  if (viewMode === "genre") {
+    els.artists.hidden = true;
+    els.genreView.hidden = false;
+    renderGenreView(list);
+  } else {
+    els.artists.hidden = false;
+    els.genreView.hidden = true;
+    for (const a of list) {
+      els.artists.appendChild(renderArtist(a));
+    }
   }
+}
+
+function renderGenreView(list) {
+  // Group by genre, then sub-genre
+  const groups = {};
+  for (const a of list) {
+    const genre = a.genre || "(No genre)";
+    const sub = a.subGenre || "";
+    if (!groups[genre]) groups[genre] = {};
+    if (!groups[genre][sub]) groups[genre][sub] = [];
+    groups[genre][sub].push(a.name);
+  }
+
+  const sortedGenres = Object.keys(groups).sort((a, b) => {
+    if (a === "(No genre)") return 1;
+    if (b === "(No genre)") return -1;
+    return a.localeCompare(b);
+  });
+
+  for (const genre of sortedGenres) {
+    const section = document.createElement("div");
+    section.className = "genre-section";
+
+    const subs = groups[genre];
+    const subKeys = Object.keys(subs).sort((a, b) => {
+      if (a === "") return 1;
+      if (b === "") return -1;
+      return a.localeCompare(b);
+    });
+
+    // If there's only one sub-genre group (empty string), show flat under genre header
+    const hasSubGenres = subKeys.length > 1 || (subKeys.length === 1 && subKeys[0] !== "");
+
+    const h3 = document.createElement("h3");
+    h3.textContent = genre;
+    section.appendChild(h3);
+
+    for (const sub of subKeys) {
+      const names = subs[sub].sort((a, b) => a.localeCompare(b));
+
+      if (hasSubGenres && sub) {
+        const group = document.createElement("div");
+        group.className = "subgenre-group";
+        const h4 = document.createElement("h4");
+        h4.textContent = sub;
+        group.appendChild(h4);
+        group.appendChild(renderArtistColumns(names));
+        section.appendChild(group);
+      } else if (hasSubGenres && !sub) {
+        // Artists with no sub-genre in a genre that has sub-genres
+        const group = document.createElement("div");
+        group.className = "subgenre-group";
+        const h4 = document.createElement("h4");
+        h4.textContent = "(No sub-genre)";
+        group.appendChild(h4);
+        group.appendChild(renderArtistColumns(names));
+        section.appendChild(group);
+      } else {
+        section.appendChild(renderArtistColumns(names));
+      }
+    }
+
+    els.genreView.appendChild(section);
+  }
+}
+
+function renderArtistColumns(names) {
+  const div = document.createElement("div");
+  div.className = "artist-columns";
+  for (const name of names) {
+    const span = document.createElement("span");
+    span.textContent = name;
+    div.appendChild(span);
+  }
+  return div;
 }
 
 function renderArtist(a) {

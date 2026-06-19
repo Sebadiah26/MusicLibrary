@@ -166,6 +166,36 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 
 .empty { color: var(--muted); text-align: center; padding: 20px; }
 
+/* Genre view */
+.genre-section { margin-bottom: 24px; }
+.genre-section h3 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: var(--accent);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+.subgenre-group { margin: 8px 0 12px 8px; }
+.subgenre-group h4 {
+  margin: 0 0 4px;
+  font-size: .88rem;
+  color: var(--accent-2);
+  font-weight: 500;
+}
+.artist-columns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px 16px;
+  padding-left: 4px;
+}
+.artist-columns span {
+  font-size: .9rem;
+  padding: 2px 0;
+}
+@media (max-width: 820px) {
+  .artist-columns { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 820px) {
   .artist-main { grid-template-columns: 1fr 1fr; }
 }

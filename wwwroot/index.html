@@ -71,12 +71,14 @@
           <select id="genreFilter"><option value="">All genres</option></select>
           <select id="subGenreFilter"><option value="">All sub-genres</option></select>
           <label class="checkbox"><input type="checkbox" id="favOnly" /> Favorites only</label>
+          <button id="viewToggleBtn" class="ghost">By Genre</button>
           <button id="refreshBtn" class="ghost">Refresh</button>
           <button id="clearAllBtn" class="ghost">Clear All Data</button>
         </div>
       </div>
 
       <div id="artists"></div>
+      <div id="genreView" hidden></div>
       <p id="emptyMsg" class="empty" hidden>No artists yet. Import a CSV to get started.</p>
     </section>
   </main>
