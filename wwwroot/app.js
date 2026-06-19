@@ -212,12 +212,17 @@ function renderArtist(a) {
     </div>
   `;
 
-  // Favorite toggle
+  // Favorite toggle (auto-saves)
   const favBtn = main.querySelector(".fav");
   let isFav = a.isFavorite;
-  favBtn.addEventListener("click", () => {
+  favBtn.addEventListener("click", async () => {
     isFav = !isFav;
     favBtn.classList.toggle("on", isFav);
+    await fetch(`/api/artists/${a.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ genre: main.querySelector(".genre").value, subGenre: main.querySelector(".subgenre").value, isFavorite: isFav, rating: rating === 0 ? null : rating }),
+    });
   });
 
   // Star rating
