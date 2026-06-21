@@ -71,6 +71,15 @@
           <select id="genreFilter"><option value="">All genres</option></select>
           <select id="subGenreFilter"><option value="">All sub-genres</option></select>
           <label class="checkbox"><input type="checkbox" id="favOnly" /> Favorites only</label>
+          <select id="sortBy">
+            <option value="name">Sort: Name</option>
+            <option value="albums">Sort: Albums</option>
+            <option value="songs">Sort: Songs</option>
+            <option value="favorites">Sort: Favorites</option>
+            <option value="rating">Sort: Rating</option>
+            <option value="genre">Sort: Genre</option>
+          </select>
+          <button id="sortDirBtn" class="ghost" title="Toggle sort direction">A-Z</button>
           <button id="viewToggleBtn" class="ghost">By Genre</button>
           <button id="refreshBtn" class="ghost">Refresh</button>
           <button id="clearAllBtn" class="ghost">Clear All Data</button>

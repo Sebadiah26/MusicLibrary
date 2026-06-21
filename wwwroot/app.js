@@ -21,6 +21,8 @@ const els = {
   genreFilter: $sel("#genreFilter"),
   subGenreFilter: $sel("#subGenreFilter"),
   favOnly: $sel("#favOnly"),
+  sortBy: $sel("#sortBy"),
+  sortDirBtn: $sel("#sortDirBtn"),
   viewToggleBtn: $sel("#viewToggleBtn"),
   refreshBtn: $sel("#refreshBtn"),
   clearAllBtn: $sel("#clearAllBtn"),
@@ -163,6 +165,13 @@ els.search.addEventListener("input", () => {
   debounce = setTimeout(loadArtists, 250);
 });
 els.favOnly.addEventListener("change", loadArtists);
+els.sortBy.addEventListener("change", loadArtists);
+let sortDir = "asc";
+els.sortDirBtn.addEventListener("click", () => {
+  sortDir = sortDir === "asc" ? "desc" : "asc";
+  els.sortDirBtn.textContent = sortDir === "asc" ? "A-Z" : "Z-A";
+  loadArtists();
+});
 els.genreFilter.addEventListener("change", () => {
   updateSubGenreOptions();
   loadArtists();
@@ -231,6 +240,8 @@ async function loadArtists() {
   if (els.favOnly.checked) params.set("favorites", "true");
   if (els.genreFilter.value) params.set("genre", els.genreFilter.value);
   if (els.subGenreFilter.value) params.set("subGenre", els.subGenreFilter.value);
+  if (els.sortBy.value !== "name") params.set("sort", els.sortBy.value);
+  if (sortDir === "desc") params.set("dir", "desc");
 
   const res = await fetch("/api/artists?" + params.toString());
   const list = await res.json();

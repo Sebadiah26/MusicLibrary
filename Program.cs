@@ -61,7 +61,7 @@ app.MapPost("/api/upload", async (HttpRequest request, CsvImportService importer
 });
 
 // List all artists (with counts).
-app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorites, string? genre, string? subGenre) =>
+app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorites, string? genre, string? subGenre, string? sort, string? dir) =>
 {
     var query = db.Artists.AsNoTracking().AsQueryable();
 
@@ -77,16 +77,26 @@ app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorit
     if (!string.IsNullOrWhiteSpace(subGenre))
         query = query.Where(a => a.SubGenre != null && a.SubGenre == subGenre);
 
-    var list = await query
-        .OrderBy(a => a.Name)
-        .Select(a => new
-        {
-            a.Id, a.Name, a.Genre, a.SubGenre, a.IsFavorite, a.Rating,
-            AlbumCount = a.Albums.Count,
-            SongCount = a.Songs.Count,
-            FavoriteSongCount = a.Songs.Count(s => s.IsFavorite)
-        })
-        .ToListAsync();
+    var desc = string.Equals(dir, "desc", StringComparison.OrdinalIgnoreCase);
+    var projected = query.Select(a => new
+    {
+        a.Id, a.Name, a.Genre, a.SubGenre, a.IsFavorite, a.Rating,
+        AlbumCount = a.Albums.Count,
+        SongCount = a.Songs.Count,
+        FavoriteSongCount = a.Songs.Count(s => s.IsFavorite)
+    });
+
+    projected = sort?.ToLower() switch
+    {
+        "albums" => desc ? projected.OrderByDescending(a => a.AlbumCount) : projected.OrderBy(a => a.AlbumCount),
+        "songs" => desc ? projected.OrderByDescending(a => a.SongCount) : projected.OrderBy(a => a.SongCount),
+        "favorites" => desc ? projected.OrderByDescending(a => a.FavoriteSongCount) : projected.OrderBy(a => a.FavoriteSongCount),
+        "rating" => desc ? projected.OrderByDescending(a => a.Rating) : projected.OrderBy(a => a.Rating),
+        "genre" => desc ? projected.OrderByDescending(a => a.Genre) : projected.OrderBy(a => a.Genre),
+        _ => desc ? projected.OrderByDescending(a => a.Name) : projected.OrderBy(a => a.Name),
+    };
+
+    var list = await projected.ToListAsync();
 
     return Results.Ok(list);
 });
