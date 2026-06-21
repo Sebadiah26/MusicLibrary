@@ -142,8 +142,14 @@ public class CsvImportService
 
         var artistCache = await _db.Artists
             .Include(a => a.Albums)
-            .Include(a => a.Songs)
             .ToDictionaryAsync(a => a.Name, StringComparer.OrdinalIgnoreCase);
+
+        // Build a lightweight set of existing songs for duplicate detection.
+        var existingSongs = await _db.Songs
+            .Select(s => new { s.ArtistId, Title = s.Title.ToLower(), s.AlbumId, s.Id, s.IsFavorite })
+            .ToListAsync();
+        var songLookup = existingSongs
+            .ToLookup(s => (s.ArtistId, s.Title, s.AlbumId));
 
         while (csv.Read())
         {
@@ -179,14 +185,17 @@ public class CsvImportService
             }
 
             // Skip if this song already exists for this artist (same title and album).
-            var existingSong = artist.Songs.FirstOrDefault(s =>
-                string.Equals(s.Title, songTitle, StringComparison.OrdinalIgnoreCase) &&
-                (album is null ? s.AlbumId is null : s.AlbumId == album.Id));
-            if (existingSong is not null)
+            var key = (artist.Id, songTitle.ToLower(), album?.Id);
+            var existing = songLookup[key].FirstOrDefault();
+            if (existing is not null)
             {
                 // Update favorite status if it changed.
                 var newFav = ParseBool(Field(csv, map, "isfavorite", "favorite", "fav", "loved"));
-                if (newFav && !existingSong.IsFavorite) existingSong.IsFavorite = true;
+                if (newFav && !existing.IsFavorite)
+                {
+                    var songEntity = await _db.Songs.FindAsync(existing.Id);
+                    if (songEntity is not null) songEntity.IsFavorite = true;
+                }
                 skipped++;
                 continue;
             }
