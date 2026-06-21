@@ -88,6 +88,7 @@ public class CsvImportService
             return new ImportResult(false, 0, 0, 0, 0, messages);
 
         var artistCache = await _db.Artists
+            .Include(a => a.Albums)
             .ToDictionaryAsync(a => a.Name, StringComparer.OrdinalIgnoreCase);
 
         while (csv.Read())
@@ -106,6 +107,13 @@ public class CsvImportService
                 _db.Artists.Add(artist);
                 artistCache[artistName] = artist;
                 artistsAdded++;
+            }
+
+            // Skip if this album already exists for this artist.
+            if (artist.Albums.Any(al => string.Equals(al.Title, title, StringComparison.OrdinalIgnoreCase)))
+            {
+                skipped++;
+                continue;
             }
 
             artist.Albums.Add(new Album
@@ -134,6 +142,7 @@ public class CsvImportService
 
         var artistCache = await _db.Artists
             .Include(a => a.Albums)
+            .Include(a => a.Songs)
             .ToDictionaryAsync(a => a.Name, StringComparer.OrdinalIgnoreCase);
 
         while (csv.Read())
@@ -167,6 +176,19 @@ public class CsvImportService
                     artist.Albums.Add(album);
                     albumsAdded++;
                 }
+            }
+
+            // Skip if this song already exists for this artist (same title and album).
+            var existingSong = artist.Songs.FirstOrDefault(s =>
+                string.Equals(s.Title, songTitle, StringComparison.OrdinalIgnoreCase) &&
+                (album is null ? s.AlbumId is null : s.AlbumId == album.Id));
+            if (existingSong is not null)
+            {
+                // Update favorite status if it changed.
+                var newFav = ParseBool(Field(csv, map, "isfavorite", "favorite", "fav", "loved"));
+                if (newFav && !existingSong.IsFavorite) existingSong.IsFavorite = true;
+                skipped++;
+                continue;
             }
 
             var song = new Song
