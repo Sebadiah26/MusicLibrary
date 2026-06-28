@@ -7,3 +7,4 @@ appsettings.Development.json
 *.ldf
 iTunes Music Library.xml
 publish/
+.claude/
