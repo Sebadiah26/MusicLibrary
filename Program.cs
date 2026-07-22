@@ -60,8 +60,8 @@ app.MapPost("/api/upload", async (HttpRequest request, CsvImportService importer
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-// List all artists (with counts).
-app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorites, string? genre, string? subGenre, string? sort, string? dir) =>
+// List artists (with counts), paged.
+app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorites, string? genre, string? subGenre, string? sort, string? dir, int? page, int? pageSize) =>
 {
     var query = db.Artists.AsNoTracking().AsQueryable();
 
@@ -96,9 +96,12 @@ app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorit
         _ => desc ? projected.OrderByDescending(a => a.Name) : projected.OrderBy(a => a.Name),
     };
 
-    var list = await projected.ToListAsync();
+    var currentPage = Math.Max(page ?? 1, 1);
+    var currentPageSize = Math.Clamp(pageSize ?? 50, 1, 200);
+    var totalCount = await projected.CountAsync();
+    var items = await projected.Skip((currentPage - 1) * currentPageSize).Take(currentPageSize).ToListAsync();
 
-    return Results.Ok(list);
+    return Results.Ok(new { items, page = currentPage, pageSize = currentPageSize, totalCount });
 });
 
 // List distinct genres and sub-genres.

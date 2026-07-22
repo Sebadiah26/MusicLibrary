@@ -159,24 +159,32 @@ function downloadCsvFile(filename, content) {
 
 // ---- List ------------------------------------------------------------------
 
+let currentPage = 1;
+const PAGE_SIZE = 50;
+
+function resetPageAndLoad() {
+  currentPage = 1;
+  loadArtists();
+}
+
 let debounce;
 els.search.addEventListener("input", () => {
   clearTimeout(debounce);
-  debounce = setTimeout(loadArtists, 250);
+  debounce = setTimeout(resetPageAndLoad, 250);
 });
-els.favOnly.addEventListener("change", loadArtists);
-els.sortBy.addEventListener("change", loadArtists);
+els.favOnly.addEventListener("change", resetPageAndLoad);
+els.sortBy.addEventListener("change", resetPageAndLoad);
 let sortDir = "asc";
 els.sortDirBtn.addEventListener("click", () => {
   sortDir = sortDir === "asc" ? "desc" : "asc";
   els.sortDirBtn.textContent = sortDir === "asc" ? "A-Z" : "Z-A";
-  loadArtists();
+  resetPageAndLoad();
 });
 els.genreFilter.addEventListener("change", () => {
   updateSubGenreOptions();
-  loadArtists();
+  resetPageAndLoad();
 });
-els.subGenreFilter.addEventListener("change", loadArtists);
+els.subGenreFilter.addEventListener("change", resetPageAndLoad);
 els.refreshBtn.addEventListener("click", () => { loadGenres(); loadArtists(); });
 let viewMode = "list"; // "list" or "genre"
 els.viewToggleBtn.addEventListener("click", () => {
@@ -242,9 +250,14 @@ async function loadArtists() {
   if (els.subGenreFilter.value) params.set("subGenre", els.subGenreFilter.value);
   if (els.sortBy.value !== "name") params.set("sort", els.sortBy.value);
   if (sortDir === "desc") params.set("dir", "desc");
+  params.set("page", currentPage);
+  params.set("pageSize", PAGE_SIZE);
 
   const res = await fetch("/api/artists?" + params.toString());
-  const list = await res.json();
+  const data = await res.json();
+  const list = data.items;
+  const totalCount = data.totalCount;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
 
   els.artists.innerHTML = "";
   els.genreView.innerHTML = "";
@@ -261,6 +274,8 @@ async function loadArtists() {
       els.artists.appendChild(renderArtist(a));
     }
   }
+
+  renderPaging(totalCount, totalPages);
 }
 
 function renderGenreView(list) {
@@ -521,6 +536,45 @@ function renderDetail(d) {
   }
 
   return container;
+}
+
+// ---- Paging ----------------------------------------------------------------
+
+function renderPaging(totalCount, totalPages) {
+  let bar = $sel("#pagingBar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "pagingBar";
+    bar.className = "paging-bar";
+    // Insert after the artists card
+    const card = els.artists.closest(".card") || els.artists.parentElement;
+    card.appendChild(bar);
+  }
+
+  if (totalPages <= 1) { bar.hidden = true; return; }
+  bar.hidden = false;
+
+  bar.innerHTML = "";
+
+  const prev = document.createElement("button");
+  prev.className = "small ghost";
+  prev.textContent = "Prev";
+  prev.disabled = currentPage <= 1;
+  prev.addEventListener("click", () => { currentPage--; loadArtists(); });
+
+  const info = document.createElement("span");
+  info.className = "paging-info";
+  info.textContent = `Page ${currentPage} of ${totalPages} (${totalCount} artists)`;
+
+  const next = document.createElement("button");
+  next.className = "small ghost";
+  next.textContent = "Next";
+  next.disabled = currentPage >= totalPages;
+  next.addEventListener("click", () => { currentPage++; loadArtists(); });
+
+  bar.appendChild(prev);
+  bar.appendChild(info);
+  bar.appendChild(next);
 }
 
 // ---- Helpers ---------------------------------------------------------------
