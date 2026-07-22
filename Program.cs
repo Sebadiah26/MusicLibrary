@@ -96,6 +96,12 @@ app.MapGet("/api/artists", async (MusicContext db, string? search, bool? favorit
         _ => desc ? projected.OrderByDescending(a => a.Name) : projected.OrderBy(a => a.Name),
     };
 
+    if (page is null && pageSize is null)
+    {
+        var all = await projected.ToListAsync();
+        return Results.Ok(all);
+    }
+
     var currentPage = Math.Max(page ?? 1, 1);
     var currentPageSize = Math.Clamp(pageSize ?? 50, 1, 200);
     var totalCount = await projected.CountAsync();

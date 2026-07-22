@@ -250,14 +250,17 @@ async function loadArtists() {
   if (els.subGenreFilter.value) params.set("subGenre", els.subGenreFilter.value);
   if (els.sortBy.value !== "name") params.set("sort", els.sortBy.value);
   if (sortDir === "desc") params.set("dir", "desc");
-  params.set("page", currentPage);
-  params.set("pageSize", PAGE_SIZE);
+  if (viewMode !== "genre") {
+    params.set("page", currentPage);
+    params.set("pageSize", PAGE_SIZE);
+  }
 
   const res = await fetch("/api/artists?" + params.toString());
   const data = await res.json();
-  const list = data.items;
-  const totalCount = data.totalCount;
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
+  const isPaged = !!data.items;
+  const list = isPaged ? data.items : data;
+  const totalCount = isPaged ? data.totalCount : list.length;
+  const totalPages = isPaged ? Math.ceil(totalCount / PAGE_SIZE) || 1 : 1;
 
   els.artists.innerHTML = "";
   els.genreView.innerHTML = "";
