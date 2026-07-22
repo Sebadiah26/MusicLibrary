@@ -165,6 +165,16 @@ app.MapPut("/api/artists/{id:int}", async (int id, ArtistUpdateDto dto, MusicCon
     return Results.Ok(new { artist.Id, artist.Genre, artist.SubGenre, artist.IsFavorite, artist.Rating });
 });
 
+// Toggle favorite on a song.
+app.MapPut("/api/songs/{id:int}/favorite", async (int id, MusicContext db) =>
+{
+    var song = await db.Songs.FindAsync(id);
+    if (song is null) return Results.NotFound();
+    song.IsFavorite = !song.IsFavorite;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { song.Id, song.IsFavorite });
+});
+
 // Delete an artist (cascades albums + songs).
 app.MapDelete("/api/artists/{id:int}", async (int id, MusicContext db) =>
 {

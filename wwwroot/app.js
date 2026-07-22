@@ -458,7 +458,8 @@ function renderArtist(a) {
     detail.innerHTML = "Loading…";
     const res = await fetch(`/api/artists/${a.id}`);
     const d = await res.json();
-    detail.innerHTML = renderDetail(d);
+    detail.innerHTML = "";
+    detail.appendChild(renderDetail(d));
   });
 
   wrap.appendChild(main);
@@ -470,16 +471,56 @@ function renderDetail(d) {
   const albums = (d.albums || []).map(al =>
     `<li>${escapeHtml(al.title)}${al.year ? ` (${al.year})` : ""} — ${al.songCount} song${al.songCount === 1 ? "" : "s"}</li>`
   ).join("");
-  const songs = (d.songs || []).map(s =>
-    `<li>${escapeHtml(s.title)}${s.durationSeconds ? ` — ${fmtDuration(s.durationSeconds)}` : ""}</li>`
-  ).join("");
 
-  return `
-    <h4>Albums (${(d.albums || []).length})</h4>
-    ${albums ? `<ul>${albums}</ul>` : "<p class='empty'>No albums.</p>"}
-    <h4>Songs (${(d.songs || []).length})</h4>
-    ${songs ? `<ul>${songs}</ul>` : "<p class='empty'>No songs.</p>"}
-  `;
+  const container = document.createElement("div");
+
+  const albumHeader = document.createElement("h4");
+  albumHeader.textContent = `Albums (${(d.albums || []).length})`;
+  container.appendChild(albumHeader);
+  if (albums) {
+    const ul = document.createElement("ul");
+    ul.innerHTML = albums;
+    container.appendChild(ul);
+  } else {
+    const p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "No albums.";
+    container.appendChild(p);
+  }
+
+  const songHeader = document.createElement("h4");
+  songHeader.textContent = `Songs (${(d.songs || []).length})`;
+  container.appendChild(songHeader);
+
+  if ((d.songs || []).length > 0) {
+    const ul = document.createElement("ul");
+    for (const s of d.songs) {
+      const li = document.createElement("li");
+      const favBtn = document.createElement("button");
+      favBtn.className = "song-fav" + (s.isFavorite ? " on" : "");
+      favBtn.textContent = "♥";
+      favBtn.title = "Toggle favorite";
+      favBtn.addEventListener("click", async () => {
+        const res = await fetch(`/api/songs/${s.id}/favorite`, { method: "PUT" });
+        if (res.ok) {
+          const data = await res.json();
+          s.isFavorite = data.isFavorite;
+          favBtn.classList.toggle("on", s.isFavorite);
+        }
+      });
+      li.appendChild(favBtn);
+      li.append(` ${escapeHtml(s.title)}${s.durationSeconds ? ` — ${fmtDuration(s.durationSeconds)}` : ""}`);
+      ul.appendChild(li);
+    }
+    container.appendChild(ul);
+  } else {
+    const p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "No songs.";
+    container.appendChild(p);
+  }
+
+  return container;
 }
 
 // ---- Helpers ---------------------------------------------------------------
