@@ -1,99 +1,114 @@
-# CLAUDE.md
+# CLAUDE.md — MusicLibrary
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project Overview
 
-## Workspace Overview
+Single-project ASP.NET Core 8.0 Web API with a vanilla JavaScript frontend for managing a personal music library of artists, albums, and songs. Supports CSV and iTunes XML import.
 
-This is a multi-project workspace containing independent projects, not a monorepo. There is no shared build system. Each subdirectory is a separate project with its own tooling.
+**Repository:** https://github.com/Sebadiah26/MusicLibrary
+**Solution file:** `MusicLibrary.sln`
 
-## Primary Projects
+## Build & Run
 
-### Sebadiah26/DFSSlateAnalyzerProject (main project, most active)
-Multi-layered .NET + Angular solution for DFS slate analysis. Solution file: `DFSSlateAnalyzer.sln`
-
-**Architecture** (layered, with shared core):
-- `DFSSlateAnalyzerAPI` — ASP.NET Core Web API backend
-- `DFSSlateAnalyzerAngular` — Angular frontend (in `ClientApp/` subdirectory)
-- `DFSSlateAnalyzerCore` — Shared business logic library
-- `DFSSlateAnalyzerData` — Data access layer
-- `DFSSlateAnalyzerService` — Service layer
-- `DFSSlateAnalyzerMobile` / `DFSSlateAnalyzerApp` — Mobile/desktop clients
-- `StaffManagement` + `StaffManagement.Data` — Staff management module
-- `CSVReader` — CSV parsing utility
-
-```
-dotnet build DFSSlateAnalyzer.sln
-```
-
-### Sebadiah26/SlateAnalyzer
-.NET MAUI cross-platform app (Android, iOS, macOS, Windows).
-
-### Sebadiah26/SchoolAppTracker
-ASP.NET Core Razor Pages app (.NET 10.0) for school district third-party app tracking. Layered architecture: Web → Core → Data. SQL Server LocalDB, EF Core 10, Bootstrap 5, Google OAuth.
-```
-dotnet build SchoolAppTracker.slnx
-dotnet run --project SchoolAppTracker
-```
-
-### Sebadiah26/MusicLibrary
-ASP.NET Core Web API with vanilla JS frontend for managing a music library of artists, albums, and songs. EF Core data layer, CSV import service, and sample data.
-```
+```bash
 dotnet build MusicLibrary.sln
 dotnet run --project MusicLibrary
 ```
 
-### Sebadiah26/workspace-config
-Workspace-level configuration and documentation for the multi-project development environment. Contains this `CLAUDE.md` and a `.gitignore` for all independent project subdirectories.
+- **Kestrel (dev):** https://localhost:7080 / http://localhost:5080
+- **IIS (prod):** In-process hosting via AspNetCoreModuleV2
+- **Cloudflare tunnel:** `music.craigkielinski.com` → http://192.168.1.168:80
 
-### template-python
-Python 3.11+ project using Poetry. Has pytest, mypy, pylint, black, mkdocs.
-```
-poetry install
-poetry run TemplateDemo
-```
+## Architecture
 
-## Build Commands by Framework
+Single project, no layered separation. Minimal APIs defined in `Program.cs`, vanilla JS frontend in `wwwroot/`.
 
-**Angular projects** (angularproject1, DFSAngular, my-app, and ClientApp dirs):
 ```
-npm install
-ng serve          # dev server (some configured with --ssl)
-ng build          # production build
-ng test           # unit tests (Karma)
-```
-
-**ASP.NET Core APIs** (DFSAngularAPI, LineupAPI, and API projects within solutions):
-```
-dotnet restore
-dotnet build
-dotnet run
-```
-
-**Hybrid ASP.NET + Angular** (my-angular, GlobalMarket, DFSSlateAnalyzerAngular):
-```
-dotnet build      # builds both .NET backend and npm packages
-```
-The Angular frontend lives in a `ClientApp/` subdirectory and is built automatically via SPA proxy integration.
-
-**.NET MAUI** (MauiApp1, MauiApp2, SlateAnalyzer):
-```
-dotnet build -f net7.0-windows10.0.19041.0
+MusicLibrary/
+├── Program.cs              Startup config + all API endpoints (minimal APIs)
+├── Data/
+│   └── MusicContext.cs     EF Core DbContext + entity configuration
+├── Models/
+│   ├── Artist.cs           Artist entity (name, genre, subGenre, rating, favorite)
+│   ├── Album.cs            Album entity (title, year, FK to artist)
+│   └── Song.cs             Song entity (title, duration, favorite, FK to artist/album)
+├── Services/
+│   ├── CsvImportService.cs     CSV parsing & import (artists, albums, songs)
+│   └── ITunesXmlParserService.cs  iTunes Music Library.xml parser
+├── wwwroot/
+│   ├── index.html          Single-page HTML layout
+│   ├── app.js              Vanilla JS SPA logic (599 lines)
+│   └── styles.css          Dark theme CSS
+├── sample-data/            Sample CSV files (artists, albums, songs)
+├── appsettings.json        SQL Server connection string
+├── web.config              IIS hosting config (500 MB upload limit)
+└── Properties/
+    └── launchSettings.json
 ```
 
-## Tech Stack Summary
+## API Endpoints
 
-| Stack | Versions |
-|-------|----------|
-| .NET | 6.0–10.0 |
-| Angular | 13–14 |
-| C# | Primary backend language |
-| TypeScript | Frontend language |
-| Python | 3.11+ (template-python only) |
-| Swagger/OpenAPI | Configured on all .NET APIs |
+All defined as minimal APIs in `Program.cs`:
 
-## Notes
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/artists` | List artists (search, genre, subGenre, favorites, sort, paging) |
+| GET | `/api/artists/{id}` | Artist detail with albums and songs |
+| PUT | `/api/artists/{id}` | Update genre, subGenre, isFavorite, rating |
+| DELETE | `/api/artists/{id}` | Delete artist (cascades albums + songs) |
+| GET | `/api/genres` | List distinct genres with sub-genres |
+| PUT | `/api/songs/{id}/favorite` | Toggle song favorite |
+| POST | `/api/upload?type=` | CSV import (type: artists, albums, songs) |
+| POST | `/api/itunes/import` | iTunes XML import to database |
+| POST | `/api/itunes/convert` | iTunes XML to CSV conversion (no DB write) |
+| DELETE | `/api/reset` | Clear all data |
 
-- Most .NET projects include `.sln` files for Visual Studio; use `dotnet build <solution>.sln` to build entire solutions.
-- Angular projects use standard Angular CLI. Check individual `angular.json` for project-specific configuration (SSL, ports, etc.).
-- The `Python/` directory contains Jupyter notebook experiments (NBA data, stock analysis) — no build system.
-- The `React/` directory is an empty scaffold with only a `.sln` file.
+**Paging:** Default page size 50, max 200. Genre view skips paging.
+
+## Database
+
+- **SQL Server** (named instance `CKIELINSKI`, Windows auth)
+- **Database:** `MusicLibrary`
+- **No migrations** — uses `EnsureCreated()` on startup
+- **Entities:** Artist, Album, Song
+- **Cascade deletes:** Artist deletion cascades to albums and songs
+
+## Key Technologies
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| .NET | 8.0 | Backend framework |
+| EF Core | 8.0.8 | ORM (SQL Server provider) |
+| CsvHelper | 33.0.1 | CSV parsing |
+| Vanilla JS | ES6+ | Frontend SPA |
+| Bootstrap | (none) | Custom dark theme CSS |
+
+## Frontend (wwwroot/)
+
+Vanilla JavaScript SPA with no build step.
+
+**Features:**
+- Artist list with search, genre/subGenre filters, favorites filter
+- Sortable columns (name, albums, songs, favorites, rating, genre) with direction toggle
+- Genre view (nested: genre → subGenre → artists in columns)
+- Inline editing: genre, sub-genre, favorite toggle, star rating (1-5)
+- Artist detail view with albums and songs
+- Song favorite toggle
+- CSV upload and iTunes XML import/convert
+- Paging (50 per page)
+
+**Key JS globals:** `currentPage`, `PAGE_SIZE`, `sortDir`, `viewMode`, `genreData`
+
+## CSV Import Notes
+
+- Case-insensitive, whitespace-normalized header matching
+- Supports multiple column aliases (e.g., "artist"/"artistname"/"name")
+- De-duplicates on import (artists by name, albums by artist+title, songs by artist+title+album)
+- Duration accepts "mm:ss" or raw seconds
+- Boolean fields accept: "true", "yes", "y", "1", "fav", "star"
+- Re-import updates favorite status on existing songs
+
+## Hosting Notes
+
+- Upload limit: 500 MB (configured in FormOptions, Kestrel, and web.config)
+- Server-side paging added to prevent Cloudflare timeouts on large artist lists
+- `app.js` loaded with cache-busting query string in `index.html`
